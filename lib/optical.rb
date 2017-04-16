@@ -159,7 +159,7 @@ module Optical
           @uri = URI(host)
         end
 
-        o.on('v', '--verbose', 'Print debug information to STDERR') do |v|
+        o.on('-v', '--verbose', 'Print debug information to STDERR') do |v|
           @verbose = v
         end
       end
