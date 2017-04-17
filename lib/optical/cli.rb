@@ -1,18 +1,23 @@
 require 'optparse'
 require 'filecache'
+require 'pathname'
 
+require_relative './config'
 require_relative './request'
 require_relative './fetch_json'
 
 module Optical
   # Command-line interface
   class CLI
-    DEFAULT_HOST = 'https://optica.d.musta.ch'.freeze
-
     # rate-limit when printing huge JSON to a tty
     TTY_TIMEOUT = 0.00001
 
-    CACHE_ROOT = File.expand_path('~/.optical/cache')
+    USER_PATH = Pathname.new('~/.optical').expand_path
+    CONFIG_PATH = USER_PATH.join('config.yml')
+    CACHE_ROOT = USER_PATH.join('cache').to_s
+
+    ERR_NOT_FOUND = 4
+    ERR_INVALID = 2
 
     # 15 min
     CACHE_MAX_AGE = 15 * 60
@@ -21,12 +26,14 @@ module Optical
       new.run(argv)
     end
 
-    attr_reader :uri, :fields, :verbose, :cache, :max_age, :delete_cache
+    attr_reader :fields, :verbose, :cache, :delete_cache
 
     def initialize
-      @uri = DEFAULT_HOST
-      @fields = nil
+      @config = ::Optical::Config.from_file(CONFIG_PATH)
+      @host = nil
+      @fields = []
       @verbose = false
+      @pretty = data_pipe.tty?
       @cache = ::FileCache.new(
         "requests",
         CACHE_ROOT,
@@ -41,20 +48,35 @@ module Optical
     # @return [OptionParser]
     def option_parser
       @option_parser ||= OptionParser.new do |o|
+        o.banner = "Usage: optical [options] [FIELD=FILTER] [FIELD2=FILTER2...]"
+
+        o.separator ''
+        o.separator <<-EOS
+Fetch host information from Optica, and cache it for 15 minutes. Output the
+fetched information as single-line JSON hashes, suitable for furhter processing with `jq`.
+
+FIELD: any optica field; see your optica host for availible fields
+FILTER: either a bare string, like "optica", or a regex string, like "/^(o|O)ptica?/"
+        EOS
+
+        o.separator ''
+        o.separator 'Options:'
+
         o.on(
-          '-f',
-          '--fields FIELDS',
-          'Retrieve only the given fields, plus some defaults. Split on commas'
+          '-s',
+          '--select a,b,c',
+          ::Array,
+          'Retrieve the given fields, in addition to the defaults'
         ) do |fs|
-          @fields = fs.split(',')
+          @fields.concat(fs)
         end
 
         o.on(
-          '-h',
-          '--host URI',
-          "Optica host (default #{DEFAULT_HOST})"
-        ) do |host|
-          @uri = host
+          '-a',
+          '--all',
+          'Retrieve all fields (default is just role,id,hostname)'
+        ) do |all|
+          @fields = nil if all
         end
 
         o.on(
@@ -65,13 +87,38 @@ module Optical
           @verbose = v
         end
 
+        o.on('-p', "--pretty[=#{data_pipe.tty?}]", "Pretty-print JSON (default true when STDOUT is a TTY)") do |p|
+          @pretty = p
+        end
+
         o.on(
           '-r',
           '--refresh',
-          'Delete cache before performing request'
+          'Delete cache before performing request.'
         ) do |r|
           @delete_cache = r
         end
+
+        o.on(
+          '-h',
+          '--host URI',
+          "Optica host (default #{@config.default_host.inspect})"
+        ) do |host|
+          @host = host
+        end
+
+        o.on(
+          '-H URI',
+          '--set-default-host URI',
+          'Set the default optica host'
+        ) do |h|
+          # TODO: move to #run
+          @host = h
+          @config.default_host = h
+          @config.write!
+          log "set default host to #{h}"
+        end
+
       end
     end
 
@@ -80,19 +127,43 @@ module Optical
     # @param [Array<String>] argv Command-line args
     def run(argv)
       args = option_parser.parse(argv)
-      filters = args.map { |arg| parse_filter(arg) }.reduce({}, :merge)
+
+      begin
+        filters = args.map { |arg| parse_filter(arg) }.reduce({}, :merge)
+      rescue ArgumentError => err
+        ui_pipe.puts err.message
+        ui_pipe.puts ''
+        ui_pipe.puts option_parser
+        return ERR_INVALID
+      end
+
+      if host.nil?
+        ui_pipe.puts 'No host given.'
+        ui_pipe.puts 'Set the default with -H, or for the invocation with -h.'
+        ui_pipe.puts ''
+        ui_pipe.puts option_parser
+        return ERR_INVALID
+      end
 
       manage_cache
 
-      req = ::Optical::Request.new(uri).where(filters)
+      req = ::Optical::Request.new(host).where(filters)
       if fields
-        req.select(fields)
+        req.select(*fields)
       else
         req.select_all
       end
 
       json = fetch(req)
       output(json['nodes'])
+
+      if json['nodes'].any?
+        # happy!
+        return 0
+      else
+        # none found
+        return ERR_NOT_FOUND
+      end
     end
 
     def fetch(req)
@@ -117,7 +188,9 @@ module Optical
       end
 
       json.each do |_ip, node|
-        data_pipe.puts JSON.dump(node)
+        string = @pretty ? JSON.pretty_generate(node) : JSON.fast_generate(node)
+        data_pipe.puts string
+        # easier Ctrl-C in Tmux
         sleep TTY_TIMEOUT if use_sleep
       end
     end
@@ -173,6 +246,10 @@ module Optical
     # @param string [String]
     # @return [Hash<String, Any>] a filter hash
     def parse_filter(string)
+      unless string.include?('=')
+        raise ArgumentError.new("Invalid filter: #{string.inspect}")
+      end
+
       key, *values = string.split('=')
       value = values.join('=')
 
@@ -188,6 +265,10 @@ module Optical
 
       # just a string
       { key => value }
+    end
+
+    def host
+      @host || @config.default_host
     end
 
     def log(msg)
