@@ -30,6 +30,14 @@ module Optical
       @all_fields = opts[:all_fields]
     end
 
+    def filters
+      @filters.dup
+    end
+
+    def fields
+      @fields.dup
+    end
+
     # returns the fields that will be fetched using this request, via the
     # /roles endpoint.
     #
@@ -39,7 +47,7 @@ module Optical
     #
     # @param fields [Array<String>]
     # @return self
-    def fields(*fields)
+    def select(*fields)
       @fields.concat(fields).uniq!
       self
     end
@@ -47,7 +55,7 @@ module Optical
     # Request all fields. Overwrites any previously-requested fields.
     #
     # @return self
-    def all_fields!
+    def select_all
       @all_fields = true
       self
     end
@@ -72,6 +80,14 @@ module Optical
       uri.query = URI.encode_www_form(query_params)
       uri.path = '/roles' unless @all_fields
       uri
+    end
+
+    def root
+      @uri
+    end
+
+    def select_all?
+      @all_fields
     end
 
     private
