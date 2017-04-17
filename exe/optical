@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+
+require 'optica/client/cli'
+exit(Optica::Client::CLI.run(ARGV))
