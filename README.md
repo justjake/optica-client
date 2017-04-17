@@ -1,28 +1,44 @@
-# Optical
+# optica-client
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/optical`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+This `optica-client` is a CLI for Airbnb's [Optica](https://github.com/airbnb/optica) service.
+It's command-line name is `optical`.
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Install it via Rubygems:
+
+    $ gem install optica-client
+
+To use in an app, add this line to your application's Gemfile:
 
 ```ruby
-gem 'optical'
+gem 'optica-client'
 ```
 
 And then execute:
 
     $ bundle
 
-Or install it yourself as:
-
-    $ gem install optical
-
 ## Usage
 
-TODO: Write usage instructions here
+```text
+Usage: optical [options] [FIELD=FILTER] [FIELD2=FILTER2...]
+
+  Fetch host information from Optica, and cache it for 15 minutes. Output the
+  fetched information as single-line JSON hashes, suitable for furhter processing with `jq`.
+
+  FIELD: any optica field; see your optica host for availible fields
+  FILTER: either a bare string, like "optica", or a regex string, like "/^(o|O)ptica?/"
+
+Options:
+    -s, --select a,b,c               Retrieve the given fields, in addition to the defaults
+    -a, --all                        Retrieve all fields (default is just role,id,hostname)
+    -v, --verbose                    Print debug information to STDERR
+    -p, --pretty[=true]              Pretty-print JSON (default true when STDOUT is a TTY)
+    -r, --refresh                    Delete cache before performing request.
+    -h, --host URI                   Optica host (default "https://optica.d.musta.ch")
+    -H, --set-default-host URI       Set the default optica host
+```
 
 ## Development
 
@@ -32,5 +48,4 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/Jake Teton-Landis/optical.
-
+Bug reports and pull requests are welcome on GitHub at https://github.com/justjake/optica-cleint.
