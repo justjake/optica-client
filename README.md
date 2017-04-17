@@ -3,21 +3,17 @@
 This `optica-client` is a CLI for Airbnb's [Optica](https://github.com/airbnb/optica) service.
 It's command-line name is `optical`.
 
+This is not an official Airbnb product.
+
 ## Installation
 
 Install it via Rubygems:
 
     $ gem install optica-client
 
-To use in an app, add this line to your application's Gemfile:
+You'll want to configure the command-line client to use your Optica instance:
 
-```ruby
-gem 'optica-client'
-```
-
-And then execute:
-
-    $ bundle
+    $ optical -H https://optica.example.com
 
 ## Usage
 
@@ -48,4 +44,4 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/justjake/optica-cleint.
+Bug reports and pull requests are welcome on GitHub at https://github.com/justjake/optica-client.
