@@ -20,8 +20,8 @@ You'll want to configure the command-line client to use your Optica instance:
 ```text
 Usage: optical [options] [FIELD=FILTER] [FIELD2=FILTER2...]
 
-  Fetch host information from Optica, and cache it for 15 minutes. Output the
-  fetched information as single-line JSON hashes, suitable for furhter processing with `jq`.
+  Fetch host information from Optica, and cache it for 15 minutes.
+  Output the fetched information as a JSON stream, suitable for processing with `jq`.
 
   FIELD: any optica field; see your optica host for availible fields
   FILTER: either a bare string, like "optica", or a regex string, like "/^(o|O)ptica?/"
@@ -30,10 +30,23 @@ Options:
     -s, --select a,b,c               Retrieve the given fields, in addition to the defaults
     -a, --all                        Retrieve all fields (default is just role,id,hostname)
     -v, --verbose                    Print debug information to STDERR
-    -p, --pretty[=true]              Pretty-print JSON (default true when STDOUT is a TTY)
+    -p, --pretty[=false]             Pretty-print JSON (default true when STDOUT is a TTY)
     -r, --refresh                    Delete cache before performing request.
     -h, --host URI                   Optica host (default "https://optica.d.musta.ch")
     -H, --set-default-host URI       Set the default optica host
+
+Examples:
+  Retrieve all nodes with a role starting with "example-":
+    optical role=/^example-/
+
+  Retrieve all the nodes registered to a test optica instance:
+    optical -h https://optica-test.example.com
+
+  Retrieve all data about my nodes:
+    optical --all launched_by=`whoami`
+
+  SSH into the first matched node:
+    ssh $(optical role=example branch=jake-test | head -n 1 | jq -r .hostname)
 ```
 
 ## Development
