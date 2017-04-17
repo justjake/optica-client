@@ -1,5 +1,4 @@
 #!/usr/bin/env ruby
 
-require 'optical'
-
+require 'optical/cli'
 Optical::CLI.run(ARGV)
