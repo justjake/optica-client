@@ -33,6 +33,7 @@ module Optica
         @config = ::Optica::Client::Config.from_file(CONFIG_PATH)
         @host = nil
         @fields = []
+        @outs = []
         @verbose = false
         @pretty = data_pipe.tty?
         @cache = ::FileCache.new(
@@ -78,6 +79,16 @@ module Optica
             'Retrieve all fields (default is just role,id,hostname)'
           ) do |all|
             @fields = nil if all
+          end
+
+          o.on(
+            '-j',
+            '--just a,b,c',
+            ::Array,
+            'Print just the given fields as tab-seperated strings, instead of outputting json. Implies selecting those fields.'
+          ) do |outs|
+            @outs.concat(outs)
+            @fields.concat(outs)
           end
 
           o.on(
@@ -133,7 +144,7 @@ module Optica
     optical --all launched_by=`whoami`
 
   SSH into the first matched node:
-    ssh $(optical role=example branch=jake-test | head -n 1 | jq -r .hostname)
+    ssh $(optical --just hostname role=example branch=jake-test | head -n 1)
           EOS
         end
       end
@@ -159,6 +170,10 @@ module Optica
           ui_pipe.puts ''
           ui_pipe.puts option_parser
           return ERR_INVALID
+        end
+
+        if @outs.any? && @verbose
+          ui_pipe.puts "Will print only: #{@outs}"
         end
 
         manage_cache
@@ -204,7 +219,11 @@ module Optica
         end
 
         json.each do |_ip, node|
-          string = @pretty ? JSON.pretty_generate(node) : JSON.fast_generate(node)
+          if @outs.any?
+            string = node.values_at(*@outs.uniq).join("\t")
+          else
+            string = @pretty ? JSON.pretty_generate(node) : JSON.fast_generate(node)
+          end
           data_pipe.puts string
           # easier Ctrl-C in Tmux
           sleep TTY_TIMEOUT if use_sleep

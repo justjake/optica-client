@@ -29,10 +29,12 @@ Usage: optical [options] [FIELD=FILTER] [FIELD2=FILTER2...]
 Options:
     -s, --select a,b,c               Retrieve the given fields, in addition to the defaults
     -a, --all                        Retrieve all fields (default is just role,id,hostname)
+    -j, --just a,b,c                 Print just the given fields as tab-seperated strings,
+                                     instead of outputting json. Implies selecting those fields.
     -v, --verbose                    Print debug information to STDERR
     -p, --pretty[=false]             Pretty-print JSON (default true when STDOUT is a TTY)
     -r, --refresh                    Delete cache before performing request.
-    -h, --host URI                   Optica host (default "https://optica.d.musta.ch")
+    -h, --host URI                   Optica host (default "https://example.com")
     -H, --set-default-host URI       Set the default optica host
 
 Examples:
@@ -46,7 +48,7 @@ Examples:
     optical --all launched_by=`whoami`
 
   SSH into the first matched node:
-    ssh $(optical role=example branch=jake-test | head -n 1 | jq -r .hostname)
+    ssh $(optical --just hostname role=example branch=jake-test | head -n 1)
 ```
 
 ## Development
