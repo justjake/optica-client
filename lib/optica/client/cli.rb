@@ -51,6 +51,7 @@ module Optica
       def option_parser
         @option_parser ||= OptionParser.new do |o|
           o.banner = "Usage: optical [options] [FIELD=FILTER] [FIELD2=FILTER2...]"
+          o.version = ::Optica::Client::VERSION
 
           o.separator ''
           o.separator <<-EOS
