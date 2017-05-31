@@ -2,6 +2,7 @@ require 'optparse'
 require 'filecache'
 require 'pathname'
 
+require_relative './version'
 require_relative './config'
 require_relative './request'
 require_relative './fetch_json'
